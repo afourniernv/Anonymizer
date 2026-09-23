@@ -124,6 +124,37 @@ IDs and input order are retained for records that complete the pipeline. A
 dropped record uses the same caller-provided ID in `result.failed_records`.
 `trace_dataframe` is for pipeline diagnostics.
 
+#### Detector-only async API
+
+Latency-sensitive applications can call GLiNER directly and receive entity
+spans without constructing the full Data Designer pipeline or writing dataset
+artifacts:
+
+```python
+import asyncio
+
+from anonymizer import OnlineDetector, TextRecord
+
+
+async def main() -> None:
+    async with OnlineDetector(
+        endpoint="http://127.0.0.1:8001/v1",
+        model="fastino/gliner2-privacy-filter-PII-multi",
+    ) as detector:
+        results = await detector.detect(
+            [TextRecord(id="turn-1", text="Email Alice at alice@example.com")]
+        )
+        print(results[0].spans)
+
+
+asyncio.run(main())
+```
+
+This sends the source text to the configured endpoint and runs only first-pass
+GLiNER detection. It does not validate, augment, replace, or rewrite text. See
+[Detect](https://nvidia-nemo.github.io/Anonymizer/latest/concepts/detection/#detector-only-online-api)
+for the accuracy and failure-handling differences from the full pipeline.
+
 ## Language And Regional Coverage
 
 Anonymizer has been tested most extensively on English-language data. Multilingual quality has not yet been evaluated systematically across languages, domains, and models.

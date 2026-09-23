@@ -67,6 +67,46 @@ retains IDs and input order for records that complete the pipeline. Dropped
 records use the same caller-provided IDs in `result.failed_records`. Use
 `result.trace_dataframe` only when you need internal pipeline diagnostics.
 
+### Detector-only online API
+
+Applications that need a request-time first pass can call a compatible GLiNER
+endpoint without constructing the full Data Designer pipeline or creating
+dataset artifacts:
+
+```python
+from anonymizer import OnlineDetectConfig, OnlineDetector, TextRecord
+
+records = [TextRecord(id="turn-1", text="Email Alice at alice@example.com")]
+config = OnlineDetectConfig(entity_labels=["first_name", "email"])
+
+async with OnlineDetector(
+    endpoint="http://127.0.0.1:8001/v1",
+    model="fastino/gliner2-privacy-filter-PII-multi",
+    max_concurrency=8,
+) as detector:
+    results = await detector.detect(records, config=config)
+```
+
+`OnlineDetector` sends each non-empty record as one request to
+`<endpoint>/chat/completions`. It reuses one asynchronous HTTP client and
+applies one concurrency limit across simultaneous `detect()` calls. Results
+retain caller IDs and input order. Each span contains a normalized label,
+confidence score, and half-open character offsets into the submitted source.
+Raw entity values are not stored in the result, and input text is never
+mutated. Empty text returns an empty span list without a network request.
+
+The submitted text is visible to the configured detector service. See the
+[GLiNER server contract](self-hosting-gliner.md#server-contract) before using a
+remote endpoint with sensitive data.
+
+This API is **detector-only**. It skips LLM validation and augmentation, latent
+entity detection, replacement, rewriting, and evaluation. It can therefore
+produce more false positives and false negatives than the full Anonymizer
+pipeline and should not be described as equivalent anonymization. If any
+record times out, receives an HTTP error, or returns an unsafe response, the
+whole call fails and unfinished sibling requests are cancelled. Callers decide
+whether to retry, omit, or fail closed.
+
 ### `Detect` fields
 
 | Field | Default | Description |

@@ -27,3 +27,15 @@ class AnonymizerWorkflowError(AnonymizerError):
     so callers can inspect the exact failure without the anonymizer layer leaking backend
     exception types into its own public error hierarchy.
     """
+
+
+class OnlineDetectionError(AnonymizerError):
+    """Raised when an online detector request cannot complete."""
+
+
+class OnlineDetectionTimeoutError(OnlineDetectionError):
+    """Raised when an online detector request exceeds its deadline."""
+
+
+class OnlineDetectionResponseError(OnlineDetectionError):
+    """Raised when an online detector returns an unsafe or malformed response."""
